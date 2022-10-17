@@ -11,6 +11,7 @@ fn main() {
 
     let contents = format!("{}\t{}\n", key, value);
     // write file or panic!
+    // todo: test if db exist if not than create, use std::path::PathBuf
     std::fs::write("kv.db", contents).unwrap();
 
     let database = Database::new().expect("Create db panic");
