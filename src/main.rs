@@ -13,7 +13,7 @@ fn main() {
     // write file or panic!
     std::fs::write("kv.db", contents).unwrap();
 
-    let database = Database::new().expect("Database::new() panic!");
+    let database = Database::new().expect("Create db panic");
 }
 
 struct Database {
@@ -32,11 +32,17 @@ impl Database {
         // // same as above because ? operator
         let contents = std::fs::read_to_string("kv.db")?;
 
-        // parse the string
+        let mut map = HashMap::new();
+        for line in contents.lines() {
+            let mut chunks = line.splitn(2, '\t');
+            let key = chunks.next().expect("No key!");
+            let value = chunks.next().expect("No value!");
+            map.insert(key.to_owned(), value.to_owned());
+        }
 
-        // populate the map
-        Ok(Database {
-            map: HashMap::new(),
-        })
+        // parse string
+
+        // populate map
+        Ok(Database { map: map })
     }
 }
