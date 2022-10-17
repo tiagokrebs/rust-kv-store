@@ -9,12 +9,9 @@ fn main() {
     let value = arguments.next().unwrap();
     println!("The key is '{}' and the value is {}", key, value);
 
-    let contents = format!("{}\t{}\n", key, value);
-    // write file or panic!
-    // todo: test if db exist if not than create, use std::path::PathBuf
-    std::fs::write("kv.db", contents).unwrap();
-
-    let database = Database::new().expect("Create db panic");
+    let mut database = Database::new().expect("Create db panic");
+    database.insert(key.to_uppercase(), value.clone());
+    database.insert(key, value);
 }
 
 struct Database {
@@ -45,5 +42,9 @@ impl Database {
 
         // populate map
         Ok(Database { map: map })
+    }
+
+    fn insert(&mut self, key: String, value: String) {
+        self.map.insert(key, value);
     }
 }
