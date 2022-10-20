@@ -12,10 +12,15 @@ fn main() {
     let mut database = Database::new().expect("Create db panic");
     database.insert(key.to_uppercase(), value.clone());
     database.insert(key, value);
+    match database.flush() {
+        Ok(()) => println!("Flush ok"),
+        Err(err) => println!("Flush error '{}'", err),
+    }
 }
 
 struct Database {
     map: HashMap<String, String>,
+    flush: bool,
 }
 
 impl Database {
@@ -41,10 +46,41 @@ impl Database {
         // parse string
 
         // populate map
-        Ok(Database { map: map })
+        Ok(Database { map, flush: false })
     }
 
     fn insert(&mut self, key: String, value: String) {
         self.map.insert(key, value);
     }
+
+    fn flush(mut self) -> std::io::Result<()> {
+        self.flush = true;
+        do_flush(&self)
+    }
+}
+
+impl Drop for Database {
+    fn drop(&mut self) {
+        if !self.flush {
+            let _ = do_flush(self); // don't care abour the Result
+        }
+    }
+}
+
+fn do_flush(database: &Database) -> std::io::Result<()> {
+    // flush the data is the last thing that a database does
+    // so the contents should not be available anymore after flush
+    // this justify why we take ownership here
+    let mut contents = String::new();
+    for (key, value) in &database.map {
+        // create a kvpair below for each interaction with the db is memory unefficient
+        // let kvpair = format!("{}\t{}\n", key, value);
+        // contents.push_str(&kvpair);
+        // this is more eficient
+        contents.push_str(key);
+        contents.push('\t');
+        contents.push_str(value);
+        contents.push('\n');
+    }
+    std::fs::write("kv.db", contents)
 }
