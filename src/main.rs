@@ -2,7 +2,7 @@
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
-use std::io::{stdin, BufRead, BufReader, Error, Write};
+use std::io::{BufRead, BufReader, Error, Write};
 use std::net::{TcpListener, TcpStream};
 use std::{env, str, thread};
 
@@ -27,65 +27,26 @@ fn handle_client(stream: TcpStream) -> Result<(), Error> {
         let input: Point3d = serde_json::from_slice(&data)?;
         let value = input.x.pow(2) + input.y.pow(2) + input.z.pow(2);
         write!(stream.get_mut(), "{}", f64::from(value).sqrt())?;
-        write!(stream.get_mut(), "{}", "\n")?;
+        write!(stream.get_mut(), "{}", String::from("\n"))?;
     }
 }
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Provide --client or --server as argument");
-        std::process::exit(1);
-    }
+    let _args: Vec<_> = env::args().collect();
 
     // server
-    if args[1] == "--server" {
-        let listener = TcpListener::bind("0.0.0.0:6180").expect("Could not bind");
+    let listener = TcpListener::bind("0.0.0.0:6180").expect("Could not bind");
 
-        for stream in listener.incoming() {
-            match stream {
-                Err(e) => {
-                    eprintln!("Failed: {}", e)
-                }
-                Ok(stream) => {
-                    thread::spawn(move || {
-                        handle_client(stream).unwrap_or_else(|error| eprintln!("{:?}", error));
-                    });
-                }
+    for stream in listener.incoming() {
+        match stream {
+            Err(e) => {
+                eprintln!("Failed: {}", e)
             }
-        }
-    }
-    // client
-    else if args[1] == "--client" {
-        let mut stream =
-            TcpStream::connect("127.0.0.1:6180").expect("Could not connecto to server");
-        println!("Provide a 3D point as three comma separated integers");
-        loop {
-            let mut input = String::new();
-            let mut buffer: Vec<u8> = Vec::new();
-            stdin()
-                .read_line(&mut input)
-                .expect("Failed to read from stdin");
-            let parts: Vec<&str> = input.trim_matches('\n').split(',').collect();
-            let point = Point3d {
-                x: parts[0].parse().unwrap(),
-                y: parts[1].parse().unwrap(),
-                z: parts[2].parse().unwrap(),
-            };
-
-            stream
-                .write_all(serde_json::to_string(&point).unwrap().as_bytes())
-                .expect("Failed to weite to server");
-            stream.write_all(b"\n").expect("Failed to write to server");
-            let mut reader = BufReader::new(&stream);
-            reader
-                .read_until(b'\n', &mut buffer)
-                .expect("Could not read into buffer");
-            let input = str::from_utf8(&buffer).expect("Courl not write buffer as string");
-            if input == "" {
-                eprintln!("Error response from server");
+            Ok(stream) => {
+                thread::spawn(move || {
+                    handle_client(stream).unwrap_or_else(|error| eprintln!("{:?}", error));
+                });
             }
-            println!("Response from server {}", input);
         }
     }
 }
